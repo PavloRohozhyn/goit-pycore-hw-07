@@ -59,14 +59,14 @@ class Birthday(Field):
     def validation(self, value):
         """ validation datetime """
         return datetime.strptime(value, '%d.%m.%Y')
-    
+
 
     def __str__(self):
         if(self.value):
             return self.value.strftime('%d.%m.%Y')
         else:
             return ''
-        
+
 
     def __iter__(self):
         """Iterate over attributes"""

@@ -43,18 +43,29 @@ class Phone(Field):
 class Birthday(Field):
     """ birthday field """
 
-    def __init__(self, value):
+    def __init__(self, value: str):
         super().__init__(value)
-        try:
-            if self.validation(value):
-                self.value = value
-        except ValueError as e:
-            print(e)
+        if self.validation(value):
+            self.value = datetime.strptime(value, '%d.%m.%Y')
+        else:
+            raise ValueError ('Invalid date format. Use DD.MM.YYYY')
 
 
     def validation(self, value):
         """ validation datetime """
-        return datetime.strptime(value, 'DD.MM.YYYY')
+        return datetime.strptime(value, '%d.%m.%Y')
+    
+
+    def __str__(self):
+        if(self.value):
+            return self.value.strftime('%d.%m.%Y')
+        else:
+            return ''
+        
+
+    def __iter__(self):
+        """Iterate over attributes"""
+        yield self.value
 
 
 class Record:
@@ -103,25 +114,31 @@ class Record:
     def add_birthday(self, birthday):
         """ add birthday """
         try:
-            self.birthday = Birthday(birthday)
+            # insert date of birth
+            if self.birthday is None:
+                self.birthday = Birthday(birthday)
+                return 'Birthday added'
+            # update date of birth
+            elif self.birthday:
+                self.birthday = Birthday(birthday)
+                return 'Birthday was updated'
+            else:
+                return False
         except ValueError:
-            print('Birthday validation failed, the birthday should have next format')
+            print('Birthday validation failed, the birthday should have next format DD.MM.YYYY')
             sys.exit(0)
 
     def __str__(self):
         """ string representation """
-        return f"Contact name: {self.name}, phones: {'; '.join(str(p) for p in self.phones)}"
+        return f"Contact name: {self.name}, phones: {'; '.join(str(p) for p in self.phones)}, birthday: {self.birthday}"
 
 
     def __iter__(self):
         """Iterate over attributes"""
         yield self.name
         yield from self.phones
+        yield self.birthday
 
-
-# {
-#    Name: [Phone]
-# }
 
 class AddressBook(UserDict):
     """ adress book class """
@@ -158,10 +175,11 @@ class AddressBook(UserDict):
         for item in self.data.items():
             # item -> name, record
             name, record = item
-            # record -> name, phone, birthday(2000-05-25 00:00:00)
+            if record.birthday is None:
+                continue
             contact_name, contact_phones, contact_birthday = record
             # get datatime object from str
-            b_obj = contact_birthday.date()
+            b_obj = contact_birthday.value.date()
             # get day of year (birthday) - 122
             day_of_year = b_obj.timetuple().tm_yday
             # get day of year (today) - 119
@@ -177,9 +195,10 @@ class AddressBook(UserDict):
                     # modified to next monday
                     delta = (6 - modified_birthday.weekday()+1) % 6
                     modified_birthday = modified_birthday + timedelta(days=delta)
-                result.append({'name': name, 'congratulation_date': modified_birthday})
+                result.append({'name': contact_name.value, 'congratulation_date': modified_birthday})
 
-        return result   
+        return result
+    
 
 # Main
 def main():
@@ -214,6 +233,19 @@ def main():
     # Пошук конкретного телефону у записі John
     found_phone = john.find_phone("5555555555")
     print(f"{john.name}: {found_phone}")  # Виведення: 5555555555
+
+
+    # add birthday
+    jane_record.add_birthday("26.05.2000")
+    print(jane_record)
+    # print congradulations
+    congradulation = book.get_upcoming_birthdays()
+    if congradulation:
+        for item in congradulation:
+            print(f"Name: {item['name']}, Congradultion day: {item['congratulation_date']}")
+    else:
+        return 'Unfortunately, there is no one to congratulate'
+
 
     # Видалення запису Jane
     book.delete("Jane")
